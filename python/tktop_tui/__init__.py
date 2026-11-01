@@ -15,7 +15,7 @@ import sys
 from importlib.resources import as_file, files
 from pathlib import Path
 
-VERSION = "0.3.0"
+VERSION = "0.3.3"
 HOMEPAGE = "https://github.com/AlexKay28/tktop"
 
 

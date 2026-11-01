@@ -52,6 +52,10 @@ interface DisplayItem {
   label?: string
   row?: SessionRow
   selected?: boolean
+  /** tree nesting (subagents): 0 = root */
+  depth?: number
+  /** tree nesting: last child of its parent (for the └─ glyph) */
+  isLast?: boolean
 }
 
 const COLS: Col[] = [
@@ -276,6 +280,7 @@ export class App {
       ["1..4", "sort: burn · recent · tokens · cost"],
       ["/", "filter (enter confirm · esc cancel)"],
       ["g", "group by: none → harness → model"],
+      ["t", "tree view: nest subagent sessions (htop-style)"],
       ["a", "toggle archived sessions"],
       ["j/k or ↑/↓", "move cursor · PgUp/PgDn page"],
       ["Home / End", "jump to first / last"],
@@ -344,6 +349,10 @@ export class App {
         return
       case "g":
         this.store.groupBy = GROUP_NEXT[this.store.groupBy] ?? "harness"
+        break
+      case "t":
+        // htop-style tree: nest subagent sessions under their parent
+        this.store.tree = !this.store.tree
         break
       case "G":
         this.cursor = Math.max(0, this.sessionCount() - 1)
@@ -448,7 +457,7 @@ export class App {
     return cols
   }
 
-  private rowChunks(cols: Col[], r: SessionRow, sel: boolean, now: number): TextChunk[] {
+  private rowChunks(cols: Col[], r: SessionRow, sel: boolean, now: number, depth = 0, isLast = true): TextChunk[] {
     const style = (color: string, text: string): TextChunk =>
       sel ? bg(TERM.sel)(fg(color)(text)) : fg(color)(text)
     const sep: TextChunk = sel ? bg(TERM.sel)(" ") : fg(TERM.surface)(" ")
@@ -486,10 +495,14 @@ export class App {
           text = cell(r.model, w)
           color = sel ? TERM.fgText : TERM.teal
           break
-        case "session":
-          text = cell(r.title, w)
+        case "session": {
+          // tree nesting (htop-style): indent children with branch glyphs
+          const branch =
+            depth > 0 ? "  ".repeat(depth - 1) + (isLast ? "└─ " : "├─ ") : ""
+          text = cell(branch + r.title, w)
           color = sel ? "#ffffff" : TERM.fgText
           break
+        }
         case "dir":
           text = cell(shortDir(r.directory, w), w)
           color = sel ? TERM.fgText : TERM.dim
@@ -539,25 +552,31 @@ export class App {
     const now = Date.now()
     const width = this.renderer.width ?? 80
 
-    // ── display items (group headers inserted when grouping)
+    // ── display items (group headers inserted when grouping; tree nesting in tree mode)
     this.items = []
-    let prev: SessionRow | null = null
-    for (const row of rows) {
-      const label = this.store.groupLabel(row, prev)
-      if (label != null) {
-        const groupRows = rows.filter((x) =>
-          this.store.groupBy === "harness" ? x.harness === label : x.model === label,
-        )
-        const subIn = groupRows.reduce((s, x) => s + x.tokens.input, 0)
-        const subOut = groupRows.reduce((s, x) => s + x.tokens.output + x.tokens.reasoning, 0)
-        const subCost = groupRows.reduce((s, x) => s + x.cost, 0)
-        this.items.push({
-          kind: "group",
-          label: `◆ ${label} — ${groupRows.length} sessions · in ${fmtTokens(subIn)} · out ${fmtTokens(subOut)} · cost ${fmtCost(subCost)}`,
-        })
+    if (this.store.tree) {
+      for (const { row, depth, isLast } of this.store.displayList()) {
+        this.items.push({ kind: "session", row, selected: false, depth, isLast })
       }
-      this.items.push({ kind: "session", row, selected: false })
-      prev = row
+    } else {
+      let prev: SessionRow | null = null
+      for (const row of rows) {
+        const label = this.store.groupLabel(row, prev)
+        if (label != null) {
+          const groupRows = rows.filter((x) =>
+            this.store.groupBy === "harness" ? x.harness === label : x.model === label,
+          )
+          const subIn = groupRows.reduce((s, x) => s + x.tokens.input, 0)
+          const subOut = groupRows.reduce((s, x) => s + x.tokens.output + x.tokens.reasoning, 0)
+          const subCost = groupRows.reduce((s, x) => s + x.cost, 0)
+          this.items.push({
+            kind: "group",
+            label: `◆ ${label} — ${groupRows.length} sessions · in ${fmtTokens(subIn)} · out ${fmtTokens(subOut)} · cost ${fmtCost(subCost)}`,
+          })
+        }
+        this.items.push({ kind: "session", row, selected: false })
+        prev = row
+      }
     }
 
     // ── cursor over session items
@@ -632,7 +651,7 @@ export class App {
         return
       }
       const r = item.row!
-      const chunks = this.rowChunks(cols, r, !!item.selected, now)
+      const chunks = this.rowChunks(cols, r, !!item.selected, now, item.depth ?? 0, item.isLast ?? true)
       node.content = new StyledText(chunks)
     })
 

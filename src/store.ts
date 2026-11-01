@@ -95,6 +95,8 @@ export class Store {
    *  (hottest/newest/biggest first), "asc" for alphabetical sorts */
   sortDir: "asc" | "desc" = "desc"
   groupBy: GroupKey = "none"
+  /** htop-style tree view: nest subagent sessions under their parent */
+  tree = false
   filter = ""
   showArchived = false
   /** live scatter tracks (see SessionTrack) */
@@ -293,6 +295,44 @@ export class Store {
     }
     this.sortKey = key
     this.sortDir = ["harness", "model", "title", "dir"].includes(key) ? "asc" : "desc"
+  }
+
+  /**
+   * Ordered display list. Tree mode nests subagent (child) sessions under
+   * their parent with htop-style depth markers; flat otherwise. Rows keep
+   * the filtered+sorted order from rows() at every tree level.
+   */
+  displayList(): { row: SessionRow; depth: number; isLast: boolean }[] {
+    const list = this.rows()
+    if (!this.tree) return list.map((row) => ({ row, depth: 0, isLast: true }))
+
+    const byKey = new Map(list.map((r) => [r.key, r]))
+    const kids = new Map<string, SessionRow[]>()
+    const roots: SessionRow[] = []
+    for (const r of list) {
+      const parent = r.parentId ? byKey.get(`${r.harness}:${r.parentId}`) : undefined
+      if (parent) {
+        const arr = kids.get(parent.key)
+        if (arr) arr.push(r)
+        else kids.set(parent.key, [r])
+      } else {
+        roots.push(r) // includes promoted orphans (parent filtered out)
+      }
+    }
+    const out: { row: SessionRow; depth: number; isLast: boolean }[] = []
+    const seen = new Set<string>()
+    const walk = (r: SessionRow, depth: number, isLast: boolean): void => {
+      if (seen.has(r.key)) return // cycle guard: a session can be its own ancestor in bad data
+      seen.add(r.key)
+      out.push({ row: r, depth, isLast })
+      const children = kids.get(r.key) ?? []
+      children.forEach((c, i) => walk(c, depth + 1, i === children.length - 1))
+    }
+    roots.forEach((r, i) => walk(r, 0, i === roots.length - 1))
+    // sessions stuck in a parent cycle (bad data) are promoted to roots
+    const promoted = list.filter((r) => !seen.has(r.key))
+    promoted.forEach((r, i) => walk(r, 0, i === promoted.length - 1))
+    return out
   }
 
   /** Group boundary helper for the view: returns group label or null. */  groupLabel(row: SessionRow, prevRow: SessionRow | null): string | null {

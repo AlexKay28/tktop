@@ -24,6 +24,8 @@ export interface SessionInfo {
   timeCreated: number
   /** epoch ms, last activity */
   timeUpdated: number
+  /** raw parent session id within the same harness (subagents); null for roots */
+  parentId?: string | null
 }
 
 /**

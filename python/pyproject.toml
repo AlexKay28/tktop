@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tktop-tui"
-version = "0.3.0"
+version = "0.3.3"
 description = "Live htop-style TUI dashboard for AI token consumption across coding agents (OpenCode, Claude Code, Codex, generic JSONL). Python wrapper that launches the tktop TUI via Bun."
 readme = "README.md"
 requires-python = ">=3.10"

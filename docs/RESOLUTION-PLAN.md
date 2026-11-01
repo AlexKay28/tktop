@@ -112,6 +112,14 @@ Store (2s tick):
       TUI — read-only site-packages are never touched. Verified clean-room: pip install from PyPI,
       first-run staging + dep fetch, TUI boots (exit 124 under timeout).
 
+### Phase 5 — v0.3.3 additions (✅ shipped)
+- [x] **Tree view (`t`)**: htop-style nesting of subagent sessions under their parent session.
+      OpenCode exposes `parent_id` per session (adapter reads it, guarded for older schemas);
+      Store builds a DFS display list (hidden when flat), promotes filtered-out parents' children,
+      breaks parent cycles safely; UI renders `├─`/`└─` branch glyphs with indentation. Sort order
+      and dir apply at every tree level. Verified live: this session's two subagents nest under
+      TOKFLOW. Unit suite 5/5 (DFS order, depths, isLast, cycle, flat toggle).
+
 ### Phase 5 — Future candidates (not committed)
 - Per-message drill-down (Enter opens a session detail pane; needs `session_part` parsing)
 - Budget/alerts: notify when rate or session cost crosses threshold

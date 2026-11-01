@@ -62,6 +62,7 @@ tktop
 | `1` `2` `3` `4` | quick sort: burn rate / recency / total tokens / cost |
 | `/` | filter (substring over harness · session · model · dir · id) — `enter` confirm, `esc` cancel |
 | `g` | group by: none → harness → model (with subtotal separator rows) |
+| `t` | tree view: nest subagent sessions under their parent (htop-style, `├─`/`└─`) |
 | `a` | toggle archived sessions |
 | `j` `k` `↑` `↓` / `PgUp` `PgDn` / `Home` `End` | navigate |
 | `p` | toggle live scatterplot |

@@ -29,6 +29,7 @@ interface Row {
   directory: string
   model: string | null
   agent: string | null
+  parent_id?: string | null
   cost: number
   tokens_input: number
   tokens_output: number
@@ -71,6 +72,11 @@ export class OpenCodeAdapter implements Adapter {
     return !!r
   }
 
+  private hasColumn(db: Database, table: string, col: string): boolean {
+    const cols = db.query(`pragma table_info(${table})`).all() as unknown as { name?: string }[]
+    return cols.some((c) => c.name === col)
+  }
+
   poll(): SessionInfo[] {
     const db = this.open()
     if (!db) return []
@@ -80,9 +86,10 @@ export class OpenCodeAdapter implements Adapter {
         this.lastError = "no session table in opencode.db"
         return []
       }
+      const parentIdCol = this.hasColumn(db, table, "parent_id") ? ", parent_id" : ""
       const rows = db
         .query(
-          `select id, title, slug, directory, model, agent, cost,
+          `select id, title, slug, directory, model, agent${parentIdCol}, cost,
                   tokens_input, tokens_output, tokens_reasoning,
                   tokens_cache_read, tokens_cache_write,
                   time_created, time_updated, time_archived
@@ -107,6 +114,7 @@ export class OpenCodeAdapter implements Adapter {
           directory: r.directory ?? "",
           model: normalizeModel(r.model),
           agent: r.agent ?? undefined,
+          parentId: r.parent_id ?? null,
           archived: r.time_archived != null,
           tokens,
           cost: r.cost ?? 0,
