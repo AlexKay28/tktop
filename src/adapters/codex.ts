@@ -91,7 +91,7 @@ export class CodexAdapter implements Adapter {
     let sid: string | null = null
     if (payload?.type === "session_meta" && payload.id) sid = String(payload.id)
     if (!sid) {
-      const m = path.match(/rollout-(?:\d{4}-\d{2}-\d{2}T)?([0-9a-f-]{36})\.jsonl$/i)
+      const m = path.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i)
       if (m?.[1]) sid = m[1]
     }
     if (!sid) return

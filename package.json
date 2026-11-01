@@ -2,21 +2,46 @@
   "name": "tokflow",
   "version": "0.2.1",
   "type": "module",
-  "description": "Live TUI dashboard for AI token consumption across harnesses (OpenCode, Claude Code, Codex, ...)",
+  "description": "Live htop-style TUI dashboard for AI token consumption across harnesses (OpenCode, Claude Code, Codex, generic JSONL)",
+  "keywords": [
+    "cli",
+    "tui",
+    "tokens",
+    "llm",
+    "ai",
+    "monitoring",
+    "opentui",
+    "htop"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/AlexKay28/tokflow.git"
+  },
+  "bin": {
+    "tokflow": "bin/tokflow"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "docs/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "bun": ">=1.1.0"
+  },
   "scripts": {
     "start": "bun run src/index.ts",
+    "tokflow": "bun run src/index.ts",
     "dump": "bun run src/dump.ts",
-    "typecheck": "bun check"
+    "typecheck": "bun check",
+    "prepublishOnly": "bun run typecheck"
   },
   "dependencies": {
     "@opentui/core": "^0.8.1"
   },
-  "module": "index.ts",
-  "private": true,
   "devDependencies": {
     "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^7"
   }
 }

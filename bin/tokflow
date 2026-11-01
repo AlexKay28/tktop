@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
 # tokflow launcher — runs the TUI via Bun.
+# Resolves the repo root from this script's own location, so the shim works
+# from ~/.local/bin (symlinked anywhere) and survives repo moves.
+set -eu
+
+REPO_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 export PATH="$HOME/.bun/bin:$PATH"
-exec bun run "$HOME/tokflow/src/index.ts" "$@"
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "tokflow: bun is required but not installed." >&2
+  echo "  install it with: curl -fsSL https://bun.sh/install | bash" >&2
+  exit 1
+fi
+
+exec bun run "$REPO_ROOT/src/index.ts" "$@"
