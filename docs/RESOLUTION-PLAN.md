@@ -1,13 +1,13 @@
-# tokflow — Backbone & Resolution Plan
+# tktop — Backbone & Resolution Plan
 
 ## Project backbone
 
 ```
-tokflow/
-├── bin/tokflow                  # launcher shim (bun run) → ~/.local/bin
+tktop/
+├── bin/tktop                  # launcher shim (bun run) → ~/.local/bin
 ├── src/
 │   ├── index.ts                 # entry: CLI args, createCliRenderer, App wiring
-│   ├── dump.ts                  # headless `--once` mode: poll once, print table (test harness)
+│   ├── dump.ts                  # headless table dump: poll once, print (no TUI) (test harness)
 │   ├── types.ts                 # SessionInfo / Adapter / SortKey / GroupKey contracts
 │   ├── store.ts                 # polling loop, rate derivation (EMA), history, view knobs
 │   ├── format.ts                # number/cost/age formatting, sparklines, cell padding
@@ -44,7 +44,7 @@ Store (2s tick):
 - Line 1..2 (header): totals — sessions (active/total), tokens in/out/cache-R, cost, aggregate
   burn rate; adapter status/errors.
 - Body: one row per session. Columns (adaptive, dropped by priority on narrow terminals):
-  `▸ harness │ model │ session title │ dir │ in │ out │ cache-R │ rsn │ cost │ tok/min │ spark │ age`
+  `◆ marker │ harness │ model │ session title │ dir │ in │ out │ cache-R │ rsn │ cost │ tok/min │ spark │ age`
 - Footer: mode/status line (filter input mounts here) + hotkey bar.
 - Keys: `1..4` sort (burn/recent/tokens/cost) · `/` filter · `g` group-by · `a` archived ·
   `j/k ↑/down PgUp/PgDn` navigate · `?` help · `r` refresh · `q` quit.
@@ -64,7 +64,7 @@ Store (2s tick):
 ### Phase 2 — TUI MVP (✅ complete)
 - [x] `ui.ts`: layout tree (header / pooled rows / footer / help overlay), tick integration
 - [x] Sorting (`1..4`), navigation keys (j/k/arrows/PgUp/PgDn/Home/End), quit; adaptive columns
-- **checkpoint: `tokflow` renders live session table in a terminal ✅ (verified under pty)**
+- **checkpoint: `tktop` renders live session table in a terminal ✅ (verified under pty)**
 
 ### Phase 3 — Interactivity (✅ complete)
 - [x] Filter mode (`/` + InputRenderable, escape/enter, hotkeys gated by mode)
@@ -74,7 +74,7 @@ Store (2s tick):
 
 ### Phase 4 — Polish & packaging (✅ complete)
 - [x] Resize handling (renderer `resize` event re-renders), narrow-terminal column drop priorities
-- [x] `bin/tokflow` shim + `~/.local/bin` symlink; README with usage + extension guide
+- [x] `bin/tktop` shim + `~/.local/bin` symlink; README with usage + extension guide
 - [x] `--interval`, `--all`, `--filter`, `--sort` CLI flags; `bun run typecheck` clean
 - **checkpoint: daily-usable tool ✅**
 

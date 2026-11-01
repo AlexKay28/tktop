@@ -15,12 +15,12 @@ other JS runtime was installed. The data layer needs SQLite access from the same
 | Concern | Choice | Rationale |
 |---|---|---|
 | Runtime | **Bun** (latest, user-local `~/.bun`) | Executes TypeScript directly, satisfies OpenTUI runtime requirements, ships built-in `bun:sqlite` (native, fast, read-only capable) — no native npm module compilation. |
-| UI package | **`@opentui/core`**, imperative renderables | One dependency, no framework. React/Solid bindings would add weight with no benefit for a table-centric dashboard. Keymap package rejected: a global `keyInput` handler is enough for tokflow's hotkey surface. |
+| UI package | **`@opentui/core`**, imperative renderables | One dependency, no framework. React/Solid bindings would add weight with no benefit for a table-centric dashboard. Keymap package rejected: a global `keyInput` handler is enough for tktop's hotkey surface. |
 | Language | **TypeScript**, strict-ish, ESM | OpenTUI ships first-class TS types; Bun runs it natively. |
-| Config | **`~/.config/tokflow/adapters.json`** | Lets the operator declare extra generic JSONL sources without code. Built-in adapters need zero configuration. |
-| Binary story | `bin/tokflow` shim → `bun run` | Simple; `bun build --compile` to a standalone executable is a later polish item (ROADMAP Phase 5). |
+| Config | **`~/.config/tktop/adapters.json`** | Lets the operator declare extra generic JSONL sources without code. Built-in adapters need zero configuration. |
+| Binary story | `bin/tktop` shim → `bun run` | Simple; `bun build --compile` to a standalone executable is a later polish item (ROADMAP Phase 5). |
 
-## OpenTUI usage notes (the API subset tokflow uses)
+## OpenTUI usage notes (the API subset tktop uses)
 
 Established from the canonical docs in `~/opentui/packages/web/src/content/docs/**`
 (the OpenTUI agent skill):
@@ -44,7 +44,7 @@ Established from the canonical docs in `~/opentui/packages/web/src/content/docs/
 
 5. **Keyboard**: `renderer.keyInput.on("keypress", key => …)`, checking `key.name`
    (`"q"`, `"escape"`, `"return"`, `"up"`, `"down"`, `"pageup"`, `"pagedown"`) and modifiers.
-   Direct listeners run *before* the focused renderable — tokflow gates its hotkeys on a
+   Direct listeners run *before* the focused renderable — tktop gates its hotkeys on a
    `mode` (normal / filter) so typing in the filter input never triggers actions like quit.
 
 6. **Input**: `InputRenderable` for the `/` filter prompt (`.focus()`, `INPUT`/`ENTER` events,
@@ -53,8 +53,8 @@ Established from the canonical docs in `~/opentui/packages/web/src/content/docs/
 7. **Row pool**: rows are `TextRenderable` nodes reused across ticks
    (`visible = false` for extras; `add/remove` for growth) — avoids per-tick scene churn.
 
-8. **Overlays**: help panel is an absolute-positioned Box (`position: "absolute"`,
-   centered edges), toggled with `?`.
+8. **Overlays**: help panel is an absolute-positioned Box (`position: "absolute"`, fixed
+   `top`/`left` offsets), toggled with `?`.
 
 ## Alternatives considered
 
@@ -67,7 +67,7 @@ Established from the canonical docs in `~/opentui/packages/web/src/content/docs/
 ## Consequences
 
 - One runtime (Bun) + one UI dependency — trivially auditable.
-- Testability: the data pipeline is pure TS and runs headless (`tokflow --once` dumps the table
-  to stdout) — the TUI layer can also be exercised with OpenTUI's test renderer in the future.
+- Testability: the data pipeline is pure TS and runs headless (`bun run src/dump.ts` dumps
+  the table to stdout) — the TUI layer can also be exercised with OpenTUI's test renderer in the future.
 - Vendor lock is low: OpenTUI core renderables map 1:1 to ink-style concepts if a port is ever
   needed.

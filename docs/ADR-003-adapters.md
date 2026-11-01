@@ -7,7 +7,7 @@
 
 `src/adapters/registry.ts` instantiates every built-in adapter, keeps those whose
 `available()` is true (data directory exists), plus any sources declared by the operator in
-`~/.config/tokflow/adapters.json`. tokflow is therefore zero-config on machines with known
+`~/.config/tktop/adapters.json`. tktop is therefore zero-config on machines with known
 harnesses and extensible for unknown ones via the generic adapter.
 
 ## 1. OpenCode (reference adapter, fully vetted on this VM)
@@ -58,7 +58,7 @@ harnesses and extensible for unknown ones via the generic adapter.
 
 ## 4. Generic JSONL (operator-declared sources)
 
-Config at `~/.config/tokflow/adapters.json`:
+Config at `~/.config/tktop/adapters.json`:
 
 ```jsonc
 {
@@ -85,8 +85,8 @@ Config at `~/.config/tokflow/adapters.json`:
 ```
 
 - **additive**: sums per line (JSONL append-only assumption); incremental tail cursors prevent
-  double counting within a tokflow run. Full re-read happens only on first poll or file shrink
-  (rotation) — additive sources may overcount once per tokflow launch with rotating files.
+  double counting within a tktop run. Full re-read happens only on first poll or file shrink
+  (rotation) — additive sources may overcount once per tktop launch with rotating files.
 - **latest**: last seen value wins (for cumulative counter styles like Codex).
 
 ## Cross-cutting rules

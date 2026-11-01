@@ -143,7 +143,7 @@ export class App {
       paddingLeft: 1,
       paddingRight: 1,
     })
-    this.headerTitle = new TextRenderable(r, { content: " tokflow", height: 1, wrapMode: "none" })
+    this.headerTitle = new TextRenderable(r, { content: " tktop", height: 1, wrapMode: "none" })
     this.headerTotals = new TextRenderable(r, { content: "", height: 1, wrapMode: "none" })
     this.headerCols = new TextRenderable(r, { content: "", height: 1, wrapMode: "none" })
     header.add(this.headerTitle)
@@ -236,7 +236,7 @@ export class App {
     })
     this.helpOverlay.add(
       new TextRenderable(r, {
-        content: t`  ${fg(TERM.accent)(bold("tokflow — keys"))}`,
+        content: t`  ${fg(TERM.accent)(bold("tktop — keys"))}`,
         height: 1,
         wrapMode: "none",
       }),
@@ -399,15 +399,17 @@ export class App {
   }
 
   private columns(width: number): Col[] {
+    // rowsBox has paddingLeft/Right = 1, so only width-2 cells are usable per row
+    const usable = Math.max(20, width - 2)
     let cols = [...COLS]
-    const flexWidth = (cs: Col[]) => width - cs.reduce((s, c) => s + c.width + 1, 0)
+    const flexWidth = (cs: Col[]) => usable - cs.reduce((s, c) => s + c.width + 1, 0)
     for (const drop of DROP_ORDER) {
       if (flexWidth(cols.filter((c) => !c.flexible)) >= 14) break
       cols = cols.filter((c) => c.key !== drop)
     }
     const fixed = cols.filter((c) => !c.flexible)
     const flexible = cols.find((c) => c.flexible)
-    if (flexible) flexible.width = Math.max(10, width - fixed.reduce((s, c) => s + c.width + 1, 0))
+    if (flexible) flexible.width = Math.max(10, usable - fixed.reduce((s, c) => s + c.width + 1, 0))
     return cols
   }
 
@@ -557,16 +559,16 @@ export class App {
 
     const cols = this.columns(width)
 
-    // ── header column labels
+    // ── header column labels (fitted to the padded rows area; aligned with row cells)
     const hdr = cols.map((c) => cell(c.flexible ? "SESSION" : c.title, c.width, c.align)).join(" ")
-    this.headerCols.content = t`${fg(TERM.dim)(fit(" " + hdr, width))}`
+    this.headerCols.content = t`${fg(TERM.dim)(fit(hdr, width - 2))}`
 
     // ── rows
     slice.forEach((item, i) => {
       const node = this.pool[i]
       if (!node) return
       if (item.kind === "group") {
-        node.content = t`${bg(TERM.surface)(fg(TERM.mauve)(bold(fit(" " + (item.label ?? ""), width))))}`
+        node.content = t`${bg(TERM.surface)(fg(TERM.mauve)(bold(fit(" " + (item.label ?? ""), width - 2))))}`
         return
       }
       const r = item.row!
@@ -745,7 +747,7 @@ export class App {
           : new StyledText([...adapterText.chunks, fg(TERM.dim)(", "), p])
     })
     this.headerTitle.content = new StyledText([
-      bg(TERM.accent)(fg("#11111b")(bold(" tokflow "))),
+      bg(TERM.accent)(fg("#11111b")(bold(" tktop "))),
       fg(TERM.teal)(" AI token consumption monitor "),
       fg(TERM.dim)("· runtime: "),
       ...adapterText.chunks,

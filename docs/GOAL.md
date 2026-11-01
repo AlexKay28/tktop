@@ -1,12 +1,12 @@
-# tokflow — Goal & Requirements
+# tktop — Goal & Requirements
 
 ## Goal
 
-**tokflow** is a single executable terminal dashboard (htop/nvtop/lazydocker class) that shows,
+**tktop** is a single executable terminal dashboard (htop/nvtop/lazydocker class) that shows,
 live, how many tokens AI model sessions on this machine are consuming — aggregated and filterable
 by **harness**, **session**, and **model**.
 
-The operator (you) runs several AI coding harnesses on one VM. tokflow answers, at a glance:
+The operator (you) runs several AI coding harnesses on one VM. tktop answers, at a glance:
 
 - What is burning tokens *right now* — and how fast (tokens/min)?
 - Which session/model/directory is responsible?
@@ -17,7 +17,7 @@ The operator (you) runs several AI coding harnesses on one VM. tokflow answers, 
 
 ### In scope
 
-1. **Observe only.** tokflow never controls, throttles, or talks to harnesses. It is a read-only
+1. **Observe only.** tktop never controls, throttles, or talks to harnesses. It is a read-only
    consumer of traces the harnesses already leave on disk.
 2. **Per-harness adapters.** Each supported harness gets an adapter that converts its on-disk
    traces into a normalized `SessionInfo` snapshot.
@@ -30,9 +30,9 @@ The operator (you) runs several AI coding harnesses on one VM. tokflow answers, 
 
 - **No harness control.** No pausing sessions, no budget enforcement, no feedback into harnesses.
   (Possible future work: alerting on thresholds. See ROADMAP Phase 5.)
-- **No network plumbing.** tokflow runs where the data lives; remote display can come later via
+- **No network plumbing.** tktop runs where the data lives; remote display can come later via
   SSH (OpenTUI has an `@opentui/ssh` package) — not part of v1.
-- **No perfect accounting.** Some harnesses don't persist every usage event; tokflow reports what
+- **No perfect accounting.** Some harnesses don't persist every usage event; tktop reports what
   the harness itself recorded, and each adapter documents its fidelity and caveats.
 
 ## Stakeholder interfaces

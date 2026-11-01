@@ -58,13 +58,13 @@ Three-layer pipeline, all in-process:
 |---|---|
 | **Harness hooks/plugins** (e.g. OpenCode hooks, Claude hooks) | Invasive; requires per-harness setup; harness must cooperate; breaks "observe only" principle; brittle across versions. |
 | **Network API / webhooks from harnesses** | Same cooperation problem plus network plumbing; harnesses run locally. |
-| **Sniffing process stdio / proxying provider APIs** | Requires launching harnesses *through* tokflow or MITM-ing TLS — heavyweight, fragile, and changes harness behavior. |
+| **Sniffing process stdio / proxying provider APIs** | Requires launching harnesses *through* tktop or MITM-ing TLS — heavyweight, fragile, and changes harness behavior. |
 | **One parser hardcoded per format in the UI** | Blocks multi-harness support and testing without a terminal. The adapter boundary lets `--once` mode (dump to stdout) exercise the whole data pipeline in CI/shell. |
 
 ## Consequences
 
 - Adding a harness = writing one adapter (+ auto-detection of its data directory).
-- Burn rate is *derived, not stored*: it is accurate for as long as tokflow keeps running, and
+- Burn rate is *derived, not stored*: it is accurate for as long as tktop keeps running, and
   resets on restart (documented behavior, matching "monitor on the fly" usage).
 - Adapters depend on harness storage layouts; a harness update may require an adapter update —
   contained, testable, and visible via adapter `lastError`.

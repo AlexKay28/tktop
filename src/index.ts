@@ -1,8 +1,8 @@
 /**
- * tokflow entry point.
+ * tktop entry point.
  *
  * Usage:
- *   bun run src/index.ts                 (or the `tokflow` shim)
+ *   bun run src/index.ts                 (or the `tktop` shim)
  *   --interval <ms>   poll interval (default 2000)
  *   --filter <s>      initial substring filter
  *   --sort <key>      burn | recent | tokens | cost

@@ -46,7 +46,7 @@ const hdr =
   cell("TOK/MIN", 9, "right") +
   cell("AGE", 9, "right")
 
-console.log(`tokflow — adapters: ${adapters.map((a) => `${a.harness}`).join(", ") || "none detected"}`)
+console.log(`tktop — adapters: ${adapters.map((a) => `${a.harness}`).join(", ") || "none detected"}`)
 console.log(
   `sessions ${totals.sessions} (active ${totals.active}) · ` +
     `in ${fmtTokens(totals.tokens.input)} · out ${fmtTokens(totals.tokens.output)} · ` +
