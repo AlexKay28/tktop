@@ -86,6 +86,11 @@ Store (2s tick):
     pooled cell canvas to styled runs. Details in ADR-001 layering: tracks are derived data,
     persisted only in-memory, per-run.
 
+### Phase 5 — v0.2.1 additions (✅ shipped)
+- [x] Per-session scatter markers: 8 glyphs (`● ★ ✖ ◆ ▲ ✚ ■ ✦`) × 8-color palette, assigned
+      deterministically (separate hash seeds so glyph/color don't correlate). Scatter heads and
+      the new table legend column (`◆`) show the same marker+color; `·` when no live dot.
+
 ### Phase 5 — Future candidates (not committed)
 - Per-message drill-down (Enter opens a session detail pane; needs `session_part` parsing)
 - Budget/alerts: notify when rate or session cost crosses threshold

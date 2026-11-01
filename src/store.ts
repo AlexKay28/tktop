@@ -33,6 +33,8 @@ export interface SessionTrack {
   model: string
   /** palette index for the dot/trail color */
   color: number
+  /** marker glyph index for the scatter head / table dot column */
+  marker: number
   points: TrackPoint[]
   /** last tick where the session was active/burning */
   lastActive: number
@@ -63,6 +65,16 @@ function trackColorIndex(key: string): number {
   let h = 7
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0
   return Math.abs(h) % TRACK_COLORS.length
+}
+
+/** scatter head markers — single-cell glyphs, one per track */
+export const TRACK_MARKERS = ["●", "★", "✖", "◆", "▲", "✚", "■", "✦"]
+
+function trackMarkerIndex(key: string): number {
+  // different hash seed so marker/color combinations don't correlate 1:1
+  let h = 5381
+  for (let i = 0; i < key.length; i++) h = ((h * 33 + key.charCodeAt(i)) ^ (h >>> 7)) | 0
+  return Math.abs(h) % TRACK_MARKERS.length
 }
 
 interface Sample {
@@ -177,6 +189,7 @@ export class Store {
           title: row.title,
           model: row.model,
           color: trackColorIndex(row.key),
+          marker: trackMarkerIndex(row.key),
           points: [],
           lastActive: now,
         }

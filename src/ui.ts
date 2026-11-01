@@ -18,7 +18,7 @@ import {
   type TextChunk,
 } from "@opentui/core"
 import type { SessionRow } from "./store"
-import { Store, TRACK_COLORS } from "./store"
+import { Store, TRACK_COLORS, TRACK_MARKERS } from "./store"
 import { cell, fit, fmtAgo, fmtCost, fmtRate, fmtTokens, shortDir, sparkline } from "./format"
 
 const TERM = {
@@ -54,6 +54,7 @@ interface DisplayItem {
 }
 
 const COLS: Col[] = [
+  { key: "dot", title: "◆", width: 2, align: "left" },
   { key: "harness", title: "HARNESS", width: 10, align: "left" },
   { key: "model", title: "MODEL", width: 20, align: "left" },
   { key: "session", title: "SESSION", width: 0, align: "left", flexible: true },
@@ -426,6 +427,24 @@ export class App {
       let text = ""
       let color = TERM.fgText
       switch (c.key) {
+        case "dot": {
+          const track = this.store.tracks.get(r.key)
+          const live = track != null && now - track.lastActive <= 15_000
+          if (!track || !live) {
+            text = cell("·", w)
+            color = sel ? TERM.fgText : TERM.dim
+          } else {
+            const dying = now - track.lastActive > 5000
+            const glyph = TRACK_MARKERS[track.marker % TRACK_MARKERS.length] ?? "●"
+            text = cell(glyph, w)
+            color = sel
+              ? TERM.fgText
+              : dying
+                ? "#585b70"
+                : (TRACK_COLORS[track.color % TRACK_COLORS.length] ?? TERM.accent)
+          }
+          break
+        }
         case "harness":
           text = cell(r.harness, w)
           color = sel ? TERM.fgText : TERM.accent
@@ -653,6 +672,7 @@ export class App {
     // trails first (older points reuse the track color, most recent dominate)
     for (const tr of tracks) {
       const color = TRACK_COLORS[tr.color % TRACK_COLORS.length] ?? TERM.accent
+      const glyph = TRACK_MARKERS[tr.marker % TRACK_MARKERS.length] ?? "●"
       const dying = now - tr.lastActive > 5000
       const pts = tr.points
       const keep = Math.min(60, pts.length)
@@ -661,7 +681,7 @@ export class App {
         put(colOf(p.x), rowOf(p.y), "·", dying ? "#45475a" : color)
       }
       const head = pts[pts.length - 1]!
-      put(colOf(head.x), rowOf(head.y), dying ? "○" : "●", dying ? "#585b70" : color)
+      put(colOf(head.x), rowOf(head.y), glyph, dying ? "#585b70" : color)
     }
 
     // ── plot lines from canvas (merge consecutive identical cells)

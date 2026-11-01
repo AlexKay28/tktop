@@ -18,7 +18,10 @@ Built with [OpenTUI](https://opentui.com) + Bun. Observe-only: tokflow never con
 
 - **x axis** = cumulative `input + output` tokens for the session, **logarithmic** (decade labels).
 - **y axis** = burn rate (tok/min).
-- Every **active session is a colored dot**; its recent history is drawn as a `·` trail behind it.
+- Every **active session is a colored dot**: an 8-glyph marker set (`● ★ ✖ ◆ ▲ ✚ ■ ✦`) crossed with an
+  8-color palette (assigned deterministically per session). Its recent history is drawn as a `·` trail behind it.
+- The **first table column (`◆`)** shows each session's marker+color, so you can map rows to dots at a
+  glance (`·` = no live dot / afterglow expired).
 - When a session goes inactive, its dot turns dim (`○`) and stays for **15 seconds of afterglow**, then disappears.
 - Toggle the panel with `p`.
 

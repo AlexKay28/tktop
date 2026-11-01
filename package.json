@@ -1,6 +1,6 @@
 {
   "name": "tokflow",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Live TUI dashboard for AI token consumption across harnesses (OpenCode, Claude Code, Codex, ...)",
   "scripts": {
