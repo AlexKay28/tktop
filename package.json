@@ -1,6 +1,6 @@
 {
   "name": "tktop",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "description": "Live htop-style TUI dashboard for AI token consumption across harnesses (OpenCode, Claude Code, Codex, generic JSONL)",
   "keywords": [

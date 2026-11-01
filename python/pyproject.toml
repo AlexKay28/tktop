@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tktop-tui"
+version = "0.3.0"
+description = "Live htop-style TUI dashboard for AI token consumption across coding agents (OpenCode, Claude Code, Codex, generic JSONL). Python wrapper that launches the tktop TUI via Bun."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "AlexKay28" }]
+keywords = ["cli", "tui", "ai", "llm", "tokens", "monitoring", "htop"]
+classifiers = [
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/AlexKay28/tktop"
+Repository = "https://github.com/AlexKay28/tktop"
+
+[project.scripts]
+tktop = "tktop_tui:main"
+
+[tool.setuptools]
+packages = ["tktop_tui"]
+
+[tool.setuptools.package-data]
+# the bundled TUI (staged here by python/sync.sh at build time)
+tktop_tui = ["tui/**/*"]

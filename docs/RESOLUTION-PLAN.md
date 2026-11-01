@@ -104,6 +104,14 @@ Store (2s tick):
       `SortKey` extended to every column (in/out/cacheR/rsn/age/harness/model/title/dir) with
       explicit sort direction; text columns default A→Z, value columns default biggest-first.
 
+### Phase 5 — v0.3.1 additions (✅ shipped)
+- [x] **PyPI distribution**: `pip install tktop-tui` publishes as [tktop-tui on PyPI](https://pypi.org/project/tktop-tui/)
+      ("tktop" itself was taken there by an unrelated Python project). The wheel bundles src/+bin/
+      (staged by `python/sync.sh` at build time, gitignored); the `tktop` console script stages the
+      app into `~/.local/share/tktop/<version>/`, `bun install --production`s once, and execs the
+      TUI — read-only site-packages are never touched. Verified clean-room: pip install from PyPI,
+      first-run staging + dep fetch, TUI boots (exit 124 under timeout).
+
 ### Phase 5 — Future candidates (not committed)
 - Per-message drill-down (Enter opens a session detail pane; needs `session_part` parsing)
 - Budget/alerts: notify when rate or session cost crosses threshold
