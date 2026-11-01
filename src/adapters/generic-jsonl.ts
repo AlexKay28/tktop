@@ -1,6 +1,6 @@
 /**
  * Generic JSONL adapter — operator-declared sources via
- * ~/.config/tokflow/adapters.json. See docs/ADR-003 for the config schema.
+ * ~/.config/tktop/adapters.json. See docs/ADR-003 for the config schema.
  */
 import { existsSync, readFileSync } from "node:fs"
 import { homedir } from "node:os"
@@ -50,7 +50,7 @@ interface Acc {
 }
 
 export function loadGenericConfig(path?: string): GenericSourceConfig[] {
-  const p = path ?? `${homedir()}/.config/tokflow/adapters.json`
+  const p = path ?? `${homedir()}/.config/tktop/adapters.json`
   if (!existsSync(p)) return []
   try {
     const raw = JSON.parse(readFileSync(p, "utf8"))

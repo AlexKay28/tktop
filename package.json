@@ -1,6 +1,6 @@
 {
-  "name": "tokflow",
-  "version": "0.2.1",
+  "name": "tktop",
+  "version": "0.3.0",
   "type": "module",
   "description": "Live htop-style TUI dashboard for AI token consumption across harnesses (OpenCode, Claude Code, Codex, generic JSONL)",
   "keywords": [
@@ -16,10 +16,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/AlexKay28/tokflow.git"
+    "url": "git+ssh://git@github.com/AlexKay28/tktop.git"
   },
   "bin": {
-    "tokflow": "bin/tokflow"
+    "tktop": "bin/tktop"
   },
   "files": [
     "bin/",
@@ -33,7 +33,7 @@
   },
   "scripts": {
     "start": "bun run src/index.ts",
-    "tokflow": "bun run src/index.ts",
+    "tktop": "bun run src/index.ts",
     "dump": "bun run src/dump.ts",
     "typecheck": "bun check",
     "prepublishOnly": "bun run typecheck"
