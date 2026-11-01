@@ -33,7 +33,7 @@ npm i -g tktop
 tktop
 ```
 
-Requires [Bun](https://bun.sh) ≥ 1.1 on the PATH (the launcher checks and tells you how to install it).
+Requires [Bun](https://bun.sh) ≥ 1.3.14 on the PATH (the launcher checks and tells you how to install it).
 
 **Python / pip users:** [`pip install tktop-tui`](https://pypi.org/project/tktop-tui/) also installs the same `tktop` command — a thin Python wrapper that stages the bundled TUI into `~/.local/share/tktop/`, fetches its JS deps once via `bun install`, and execs it under Bun (network needed on first run only).
 

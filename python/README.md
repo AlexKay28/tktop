@@ -20,7 +20,7 @@ curl -fsSL https://bun.sh/install | bash
 Requirements:
 
 - Python ≥ 3.10
-- Bun ≥ 1.1 (for the TUI runtime)
+- Bun ≥ 1.3.14 (for the TUI runtime)
 - network on the very first launch only (to fetch `@opentui/core`)
 
 Features: per-session token/burn-rate table with mouse-clickable column
