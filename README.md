@@ -4,11 +4,23 @@ Live terminal dashboard (htop-style) for **AI token consumption** across coding-
 Built with [OpenTUI](https://opentui.com) + Bun. Observe-only: tokflow never controls harnesses, it reads the traces they already leave on disk.
 
 ```
- tokflow  AI token consumption monitor · runtime: opencode · 17:34:21
- sessions 788 (15 active) · in 26.15M out 2.65M cache-r 340.29M rsn 100.2K cost $0.00 burn 1.2K tok/min
- HARNESS   MODEL               SESSION                  DIR          IN      OUT  CACHE-R  RSN  COST  TOK/MIN  RATE        AGE
- opencode  eliza/glm-5-3       TOKFLOW                  ~/tokflow   49.9K   59.1K  ... 
+ tokflow  AI token consumption monitor · runtime: opencode · 17:47:03
+ sessions 816 (15 active) · in 26.96M out 2.68M cache-r 346.49M rsn 100.2K cost - burn 1.1K tok/min
+┌─ scatter · x: tokens(in+out, log) · y: tok/min · 15 dots ──────────────────────┐
+│      ·                 ·        ●   ·                                              │
+│1K                     10K                  100K                    1M              │
+└─────────────────────────────────────────────────────────────────────────────────┘
+ HARNESS   MODEL           SESSION      DIR         IN      OUT  ...  TOK/MIN  RATE
+ opencode  eliza/glm-5-3  TOKFLOW      ~/tokflow  58.2K   88.3K  ...   767     ▅▃▂▂▁█
 ```
+
+## Live scatterplot (htop-style, above the table)
+
+- **x axis** = cumulative `input + output` tokens for the session, **logarithmic** (decade labels).
+- **y axis** = burn rate (tok/min).
+- Every **active session is a colored dot**; its recent history is drawn as a `·` trail behind it.
+- When a session goes inactive, its dot turns dim (`○`) and stays for **15 seconds of afterglow**, then disappears.
+- Toggle the panel with `p`.
 
 ## Quick start
 
@@ -34,6 +46,7 @@ tokflow
 | `g` | group by: none → harness → model (with subtotal separator rows) |
 | `a` | toggle archived sessions |
 | `j` `k` `↑` `↓` / `PgUp` `PgDn` / `Home` `End` | navigate |
+| `p` | toggle live scatterplot |
 | `r` | force refresh now |
 | `?` | help overlay |
 | `q` | quit (Ctrl+C works too) |

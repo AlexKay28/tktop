@@ -18,7 +18,7 @@ import {
   type TextChunk,
 } from "@opentui/core"
 import type { SessionRow } from "./store"
-import { Store } from "./store"
+import { Store, TRACK_COLORS } from "./store"
 import { cell, fit, fmtAgo, fmtCost, fmtRate, fmtTokens, shortDir, sparkline } from "./format"
 
 const TERM = {
@@ -83,6 +83,8 @@ function rateColor(r: number): string {
   return TERM.red
 }
 
+type PlotRow = { ch: string; color: string }[]
+
 /** The installed typings route EventEmitter through ambient "events" types
  * that don't carry the generic map, so use a minimal structural type. */
 interface KeyInputLike {
@@ -106,6 +108,11 @@ export class App {
 
   private pool: TextRenderable[] = []
   private items: DisplayItem[] = []
+
+  // scatter panel
+  private plotVisible = true
+  private plotBox!: BoxRenderable
+  private plotLines: TextRenderable[] = []
 
   constructor(
     private renderer: CliRenderer,
@@ -140,8 +147,20 @@ export class App {
     this.headerCols = new TextRenderable(r, { content: "", height: 1, wrapMode: "none" })
     header.add(this.headerTitle)
     header.add(this.headerTotals)
-    header.add(this.headerCols)
     root.add(header)
+
+    // live scatter: x = in+out tokens (log scale), y = tok/min, trail per session
+    this.plotBox = new BoxRenderable(r, {
+      width: "100%",
+      height: 10,
+      border: true,
+      borderStyle: "single",
+      borderColor: TERM.surface,
+      title: " scatter ",
+      titleColor: TERM.dim,
+      flexDirection: "column",
+    })
+    root.add(this.plotBox)
 
     this.rowsBox = new BoxRenderable(r, {
       width: "100%",
@@ -152,6 +171,8 @@ export class App {
       paddingRight: 1,
     })
     root.add(this.rowsBox)
+    // sticky table column header, first child of the rows area
+    this.rowsBox.add(this.headerCols)
 
     const footer = new BoxRenderable(r, {
       width: "100%",
@@ -202,7 +223,7 @@ export class App {
     this.helpOverlay = new BoxRenderable(r, {
       position: "absolute",
       width: 54,
-      height: 13,
+      height: 14,
       top: 4,
       left: 4,
       backgroundColor: TERM.surface,
@@ -226,6 +247,7 @@ export class App {
       ["a", "toggle archived sessions"],
       ["j/k or ↑/↓", "move cursor · PgUp/PgDn page"],
       ["Home / End", "jump to first / last"],
+      ["p", "toggle live scatterplot"],
       ["r", "force refresh now"],
       ["q", "quit"],
     ]
@@ -293,6 +315,11 @@ export class App {
       case "a":
         this.store.showArchived = !this.store.showArchived
         this.cursor = 0
+        this.offset = 0
+        break
+      case "p":
+        this.plotVisible = !this.plotVisible
+        this.plotBox.visible = this.plotVisible
         this.offset = 0
         break
       case "r":
@@ -364,8 +391,14 @@ export class App {
 
   // ─── rendering ───────────────────────────────────────────────────
 
+  private plotHeight(): number {
+    const termH = this.renderer.height ?? 24
+    return Math.max(8, Math.min(14, Math.floor(termH * 0.35)))
+  }
+
   private viewportRows(): number {
-    return Math.max(3, (this.renderer.height ?? 24) - 7)
+    const base = Math.max(3, (this.renderer.height ?? 24) - 7)
+    return this.plotVisible ? Math.max(3, base - this.plotHeight()) : base
   }
 
   private columns(width: number): Col[] {
@@ -528,7 +561,161 @@ export class App {
 
     this.renderHeader(now)
     this.renderFooter(n, width)
+    this.renderPlot()
   }
+
+  // ─── live scatterplot ────────────────────────────────────────────
+
+  /** Round a positive value up to a "nice" 1/2/2.5/5×10^k bound. */
+  private static niceCeil(v: number): number {
+    if (!(v > 0)) return 1
+    const steps = [1, 2, 2.5, 5]
+    const p = Math.pow(10, Math.floor(Math.log10(v)))
+    for (const s of steps) if (s * p >= v) return s * p
+    return 10 * p
+  }
+
+  private static decadeLabel(v: number): string {
+    if (v >= 1e9) return v / 1e9 + "G"
+    if (v >= 1e6) return v / 1e6 + "M"
+    if (v >= 1e3) return v / 1e3 + "K"
+    return String(v)
+  }
+
+  private renderPlot(): void {
+    if (!this.plotVisible) {
+      this.plotLines.forEach((l) => (l.visible = false))
+      return
+    }
+    const r = this.renderer
+    const h = this.plotHeight()
+    this.plotBox.height = h
+    const innerW = Math.max(10, (r.width ?? 80) - 2)
+    const innerH = Math.max(5, h - 2)
+    const rows = innerH - 1 // last inner line = decade labels
+
+    while (this.plotLines.length < innerH) {
+      const line = new TextRenderable(r, { content: "", height: 1, wrapMode: "none" })
+      this.plotLines.push(line)
+      this.plotBox.add(line)
+    }
+    this.plotLines.forEach((line, i) => {
+      line.visible = i < innerH
+    })
+    const axisLine = this.plotLines[innerH - 1]!
+
+    const now = Date.now()
+    const tracks = this.store
+      .visibleTracks()
+      .filter((t) => t.points.length > 0)
+      .sort((a, b) => a.key.localeCompare(b.key))
+
+    // ── scales: y linear (nice ceil), x logarithmic (decade bounds)
+    let yMax = 100
+    let xMin = Infinity
+    let xMax = 0
+    for (const tr of tracks) {
+      for (const p of tr.points) {
+        if (p.x > xMax) xMax = p.x
+        if (p.x > 0 && p.x < xMin) xMin = p.x
+        if (p.y > yMax) yMax = p.y
+      }
+    }
+    yMax = App.niceCeil(yMax)
+    const logMin = xMin === Infinity ? Math.log10(10) : Math.floor(Math.log10(Math.max(1, xMin)))
+    const logMax = Math.max(logMin + 1, Math.ceil(Math.log10(Math.max(10, xMax))))
+    const colOf = (x: number): number => {
+      const lx = x <= 1 ? logMin : Math.min(Math.log10(x), logMax)
+      const frac = (lx - logMin) / (logMax - logMin)
+      return Math.round(frac * (innerW - 1))
+    }
+    const rowOf = (y: number): number => rows - 1 - Math.round((y / yMax) * (rows - 1))
+
+    // ── canvas
+    const blankRow = (): PlotRow => Array.from({ length: innerW }, () => ({ ch: " ", color: TERM.bg }))
+    const canvas: PlotRow[] = Array.from({ length: rows }, blankRow)
+    const put = (col: number, row: number, ch: string, color: string) => {
+      if (row < 0 || row >= rows) return
+      const c = Math.max(0, Math.min(innerW - 1, col))
+      const cell6 = canvas[row]![c]
+      if (cell6) {
+        cell6.ch = ch
+        cell6.color = color
+      }
+    }
+    const putText = (row: number, col: number, text: string, color: string) => {
+      for (let i = 0; i < text.length; i++) put(col + i, row, text[i]!, color)
+    }
+
+    // y-range hint top-left (dots drawn later overwrite it)
+    putText(0, 0, ` y: 0…${fmtRate(yMax)} tok/min`, TERM.dim)
+
+    // trails first (older points reuse the track color, most recent dominate)
+    for (const tr of tracks) {
+      const color = TRACK_COLORS[tr.color % TRACK_COLORS.length] ?? TERM.accent
+      const dying = now - tr.lastActive > 5000
+      const pts = tr.points
+      const keep = Math.min(60, pts.length)
+      for (let i = pts.length - keep; i < pts.length - 1; i++) {
+        const p = pts[i]!
+        put(colOf(p.x), rowOf(p.y), "·", dying ? "#45475a" : color)
+      }
+      const head = pts[pts.length - 1]!
+      put(colOf(head.x), rowOf(head.y), dying ? "○" : "●", dying ? "#585b70" : color)
+    }
+
+    // ── plot lines from canvas (merge consecutive identical cells)
+    for (let ry = 0; ry < rows; ry++) {
+      const line = this.plotLines[ry]
+      if (!line) continue
+      line.content = this.chunksFromCells(canvas[ry]!)
+    }
+
+    // ── decade tick labels on the x axis (log scale)
+    const axisCells = blankRow()
+    for (let d = logMin; d <= logMax; d++) {
+      const label = App.decadeLabel(Math.pow(10, d))
+      const center = colOf(Math.pow(10, d))
+      const start = Math.max(0, Math.round(center - label.length / 2))
+      for (let i = 0; i < label.length; i++) {
+        const c = start + i
+        if (c < 0 || c >= innerW) continue
+        const cell9 = axisCells[c]
+        if (cell9) {
+          cell9.ch = label[i]!
+          cell9.color = TERM.dim
+        }
+      }
+    }
+    axisLine.content = this.chunksFromCells(axisCells)
+
+    this.plotBox.title = ` scatter · x: tokens(in+out, log) · y: tok/min · ${tracks.length} dot${tracks.length === 1 ? "" : "s"}${
+      tracks.length === 0 ? " — waiting for activity" : ""
+    } `
+  }
+
+  /** StyledText from a row of {ch,color} cells, merging consecutive identical (ch,color). */
+  private chunksFromCells(cells: { ch: string; color: string }[]): StyledText {
+    const chunks: TextChunk[] = []
+    let runCh = ""
+    let runColor: string | null = null
+    const flush = () => {
+      if (!runCh) return
+      if (runColor == null || runColor === TERM.bg) chunks.push({ __isChunk: true as const, text: runCh })
+      else chunks.push(fg(runColor)(runCh))
+      runCh = ""
+    }
+    for (const c of cells) {
+      if (c.color !== runColor) {
+        flush()
+        runColor = c.color
+      }
+      runCh += c.ch
+    }
+    flush()
+    return new StyledText(chunks)
+  }
+
 
   private renderHeader(now: number): void {
     const adapters = this.store.adaptersLive
@@ -605,7 +792,7 @@ export class App {
       fg(TERM.accent)(this.store.groupBy),
       fg(TERM.dim)("  ·  a archived:"),
       fg(this.store.showArchived ? TERM.green : TERM.dim)(this.store.showArchived ? "on" : "off"),
-      fg(TERM.dim)("  ·  / filter · ? help · q quit"),
+      fg(TERM.dim)("  ·  / filter · p scatter · ? help · q quit"),
     ])
   }
 }

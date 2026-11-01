@@ -17,11 +17,53 @@ export interface SessionRow extends SessionInfo {
   active: boolean
 }
 
+/** Live scatter track: one moving dot per active session. */
+export interface TrackPoint {
+  /** x: cumulative input+output tokens */
+  x: number
+  /** y: burn rate, output tokens per minute */
+  y: number
+  t: number
+}
+
+export interface SessionTrack {
+  key: string
+  harness: string
+  title: string
+  model: string
+  /** palette index for the dot/trail color */
+  color: number
+  points: TrackPoint[]
+  /** last tick where the session was active/burning */
+  lastActive: number
+}
+
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000
 const HISTORY_LEN = 90
 const EMA_ALPHA = 0.4
 /** burn rates below this are considered noise */
 const RATE_EPSILON = 0.5
+/** how many trail points to keep per session */
+const TRACK_POINTS_MAX = 120
+/** how long a finished session's dot+trail stays on the scatter */
+const TRACK_AFTERGLOW_MS = 15_000
+/** scatter palette (catppuccin-ish, distinct hues) */
+export const TRACK_COLORS = [
+  "#89b4fa",
+  "#a6e3a1",
+  "#f9e2af",
+  "#fab387",
+  "#f38ba8",
+  "#cba6f7",
+  "#94e2d5",
+  "#b4befe",
+]
+
+function trackColorIndex(key: string): number {
+  let h = 7
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0
+  return Math.abs(h) % TRACK_COLORS.length
+}
 
 interface Sample {
   row: SessionInfo
@@ -40,6 +82,8 @@ export class Store {
   groupBy: GroupKey = "none"
   filter = ""
   showArchived = false
+  /** live scatter tracks (see SessionTrack) */
+  readonly tracks = new Map<string, SessionTrack>()
 
   constructor(adapters: Adapter[], intervalMs = 2000) {
     this.adapters = adapters
@@ -120,6 +164,44 @@ export class Store {
       }
     }
     this.initialized = true
+
+    // ── live scatter tracks
+    for (const row of this.byKey.values()) {
+      const burning = row.burnRate > 0
+      if (!burning && !row.active) continue
+      let track = this.tracks.get(row.key)
+      if (!track) {
+        track = {
+          key: row.key,
+          harness: row.harness,
+          title: row.title,
+          model: row.model,
+          color: trackColorIndex(row.key),
+          points: [],
+          lastActive: now,
+        }
+        this.tracks.set(row.key, track)
+      }
+      track.title = row.title
+      track.model = row.model
+      track.lastActive = now
+      track.points.push({
+        x: row.tokens.input + row.tokens.output,
+        y: row.burnRate,
+        t: now,
+      })
+      if (track.points.length > TRACK_POINTS_MAX) track.points.shift()
+    }
+    // afterglow: keep finished dots 15s, then remove
+    for (const [key, track] of [...this.tracks.entries()]) {
+      if (now - track.lastActive > TRACK_AFTERGLOW_MS) this.tracks.delete(key)
+    }
+  }
+
+  /** Tracks that currently have a visible dot (active or in afterglow). */
+  visibleTracks(): SessionTrack[] {
+    const now = Date.now()
+    return [...this.tracks.values()].filter((t) => now - t.lastActive <= TRACK_AFTERGLOW_MS)
   }
 
   /** Apply filter/sort/group to the current snapshot. */

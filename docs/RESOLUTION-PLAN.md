@@ -78,6 +78,14 @@ Store (2s tick):
 - [x] `--interval`, `--all`, `--filter`, `--sort` CLI flags; `bun run typecheck` clean
 - **checkpoint: daily-usable tool ✅**
 
+### Phase 5 — v0.2.0 additions (✅ shipped)
+- [x] Live scatterplot above the table (htop-style): x = in+out tokens (log scale, decade ticks),
+      y = tok/min; one colored dot per active session with a trail behind it; afterglow — a
+      finished session's dot stays dim for 15s, then disappears. Toggle with `p`.
+  - Store owns `tracks` (per-session point rings, `input+output` vs burn rate); UI renders a
+    pooled cell canvas to styled runs. Details in ADR-001 layering: tracks are derived data,
+    persisted only in-memory, per-run.
+
 ### Phase 5 — Future candidates (not committed)
 - Per-message drill-down (Enter opens a session detail pane; needs `session_part` parsing)
 - Budget/alerts: notify when rate or session cost crosses threshold
