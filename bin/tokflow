@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# tokflow launcher — runs the TUI via Bun.
+export PATH="$HOME/.bun/bin:$PATH"
+exec bun run "$HOME/tokflow/src/index.ts" "$@"

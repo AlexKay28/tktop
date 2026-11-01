@@ -1,0 +1,22 @@
+{
+  "name": "tokflow",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Live TUI dashboard for AI token consumption across harnesses (OpenCode, Claude Code, Codex, ...)",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dump": "bun run src/dump.ts",
+    "typecheck": "bun check"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.8.1"
+  },
+  "module": "index.ts",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  }
+}
