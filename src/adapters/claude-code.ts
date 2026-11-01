@@ -69,7 +69,6 @@ export class ClaudeCodeAdapter implements Adapter {
       this.tail.read((obj, path) => this.onLine(obj, path))
 
       const out: SessionInfo[] = []
-      const now = Date.now()
       for (const [sid, a] of this.accs) {
         out.push({
           key: `${this.harness}:${sid}`,

@@ -368,10 +368,6 @@ export class App {
     this.cursor = Math.min(n - 1, Math.max(0, this.cursor + delta))
   }
 
-  private page(delta: number): void {
-    this.moveCursor(delta * Math.max(1, this.viewportRows()))
-  }
-
   // ─── filter mode ──────────────────────────────────────────────────
 
   private enterFilterMode(): void {

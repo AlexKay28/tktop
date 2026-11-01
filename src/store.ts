@@ -134,8 +134,17 @@ export class Store {
       }),
     )
 
-    for (const sessions of results) {
-      if (!sessions) continue
+    results.forEach((sessions, i) => {
+      const adapter = this.adapters[i]!
+      // ADR-003 rule 1: on adapter failure keep the previous snapshot —
+      // treat as "no news": preserve existing rows instead of dropping them.
+      const failed = sessions == null || (sessions.length === 0 && adapter.lastError != null)
+      if (failed) {
+        for (const [key, row] of [...this.byKey.entries()]) {
+          if (row.harness === adapter.harness) seen.add(key)
+        }
+        return
+      }
       for (const info of sessions) {
         seen.add(info.key)
         const prevSample = this.prev.get(info.key)
@@ -166,7 +175,7 @@ export class Store {
 
         this.prev.set(info.key, { row: structuredClone(info), time: now })
       }
-    }
+    })
 
     // drop sessions that disappeared (db cleanup, generic source removal)
     for (const key of [...this.byKey.keys()]) {

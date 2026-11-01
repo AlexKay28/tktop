@@ -4,7 +4,6 @@
  * Usage:
  *   bun run src/index.ts                 (or the `tokflow` shim)
  *   --interval <ms>   poll interval (default 2000)
- *   --once            headless dump (delegates to src/dump.ts behavior)
  *   --filter <s>      initial substring filter
  *   --sort <key>      burn | recent | tokens | cost
  *   --all             include archived sessions
