@@ -41,5 +41,27 @@ export interface Adapter {
   lastError: string | null
 }
 
-export type SortKey = "burn" | "recent" | "tokens" | "cost"
+/**
+ * Sort keys. The four classic ones (burn/recent/tokens/cost) are bound to
+ * keys 1-4; every column header is clickable and maps to one of these
+ * (in/out/cacheR/rsn/cost/burn/age/harness/model/title/dir).
+ */
+export type SortKey =
+  | "burn"  | "recent"
+  | "tokens"
+  | "cost"
+  | "in"
+  | "out"
+  | "cacheR"
+  | "rsn"
+  | "age"
+  | "harness"
+  | "model"
+  | "title"
+  | "dir"
+/** all valid SortKey values, for CLI validation */
+export const SORT_KEYS: readonly SortKey[] = [
+  "burn", "recent", "tokens", "cost", "in", "out", "cacheR", "rsn",
+  "age", "harness", "model", "title", "dir",
+]
 export type GroupKey = "none" | "harness" | "model"

@@ -15,6 +15,7 @@ import {
   StyledText,
   type CliRenderer,
   type KeyEvent,
+  type MouseEvent,
   type TextChunk,
 } from "@opentui/core"
 import type { SessionRow } from "./store"
@@ -64,11 +65,26 @@ const COLS: Col[] = [
   { key: "cacheR", title: "CACHE-R", width: 9, align: "right" },
   { key: "rsn", title: "RSN", width: 6, align: "right" },
   { key: "cost", title: "COST", width: 7, align: "right" },
-  { key: "burn", title: "TOK/MIN", width: 8, align: "right" },
+  { key: "burn", title: "TOK/MIN", width: 10, align: "right" },
   { key: "spark", title: "RATE", width: 10, align: "left" },
   { key: "age", title: "AGE", width: 5, align: "right" },
 ]
 const DROP_ORDER = ["spark", "rsn", "cacheR", "dir", "cost", "in", "age", "model", "harness"]
+
+/** table column key -> sort key (columns not listed are not sortable) */
+const SORTABLE: Record<string, import("./types").SortKey> = {
+  harness: "harness",
+  model: "model",
+  session: "title",
+  dir: "dir",
+  in: "in",
+  out: "out",
+  cacheR: "cacheR",
+  rsn: "rsn",
+  cost: "cost",
+  burn: "burn",
+  age: "recent",
+}
 
 const GROUP_NEXT: Record<string, "none" | "harness" | "model"> = {
   none: "harness",
@@ -100,6 +116,8 @@ export class App {
   private headerTitle!: TextRenderable
   private headerTotals!: TextRenderable
   private headerCols!: TextRenderable
+  /** current header column layout (x offsets within the header), for mouse hit-testing */
+  private colLayout: { key: string; x: number; w: number }[] = []
   private rowsBox!: BoxRenderable
   private statusLine!: TextRenderable
   private filterBox!: BoxRenderable
@@ -145,7 +163,16 @@ export class App {
     })
     this.headerTitle = new TextRenderable(r, { content: " tktop", height: 1, wrapMode: "none" })
     this.headerTotals = new TextRenderable(r, { content: "", height: 1, wrapMode: "none" })
-    this.headerCols = new TextRenderable(r, { content: "", height: 1, wrapMode: "none" })
+    this.headerCols = new TextRenderable(r, {
+      content: "",
+      height: 1,
+      wrapMode: "none",
+      // clickable sort: a press on selectable text would start a selection instead
+      selectable: false,
+      onMouseDown: (e) => this.onHeaderMouseDown(e),
+      onMouseOver: (e) => this.onHeaderMouseOver(e),
+      onMouseOut: () => this.renderer.setMousePointer("default"),
+    })
     header.add(this.headerTitle)
     header.add(this.headerTotals)
     root.add(header)
@@ -170,6 +197,8 @@ export class App {
       overflow: "hidden",
       paddingLeft: 1,
       paddingRight: 1,
+      // wheel over empty table area pages as well
+      onMouseScroll: (e) => this.wheelScroll(e),
     })
     root.add(this.rowsBox)
     // sticky table column header, first child of the rows area
@@ -242,6 +271,8 @@ export class App {
       }),
     )
     const keyRows: [string, string][] = [
+      ["click", "column header: sort by that column (click again: reverse)"],
+      ["click", "row: move cursor there · wheel: scroll"],
       ["1..4", "sort: burn · recent · tokens · cost"],
       ["/", "filter (enter confirm · esc cancel)"],
       ["g", "group by: none → harness → model"],
@@ -294,15 +325,19 @@ export class App {
         return
       case "1":
         this.store.sortKey = "burn"
+        this.store.sortDir = "desc"
         break
       case "2":
         this.store.sortKey = "recent"
+        this.store.sortDir = "desc"
         break
       case "3":
         this.store.sortKey = "tokens"
+        this.store.sortDir = "desc"
         break
       case "4":
         this.store.sortKey = "cost"
+        this.store.sortDir = "desc"
         break
       case "/":
         this.enterFilterMode()
@@ -549,7 +584,17 @@ export class App {
 
     // ── row pool
     while (this.pool.length < visCount) {
-      const node = new TextRenderable(this.renderer, { content: "", height: 1, wrapMode: "none" })
+      const i = this.pool.length // display index stays bound to this pooled node
+      const node = new TextRenderable(this.renderer, {
+        content: "",
+        height: 1,
+        wrapMode: "none",
+        selectable: false,
+        // click row -> move the selection cursor there
+        onMouseDown: () => this.cursorAt(this.offset + i),
+        // wheel over the table -> cursor paging
+        onMouseScroll: (e) => this.wheelScroll(e),
+      })
       this.pool.push(node)
       this.rowsBox.add(node)
     }
@@ -560,8 +605,23 @@ export class App {
     const cols = this.columns(width)
 
     // ── header column labels (fitted to the padded rows area; aligned with row cells)
-    const hdr = cols.map((c) => cell(c.flexible ? "SESSION" : c.title, c.width, c.align)).join(" ")
-    this.headerCols.content = t`${fg(TERM.dim)(fit(hdr, width - 2))}`
+    //    clickable: SORTABLE columns re-sort; the active one carries a ▼/▲ indicator
+    let hx = 0
+    this.colLayout = cols.map((c) => {
+      const entry = { key: c.key, x: hx, w: c.width }
+      hx += c.width + 1
+      return entry
+    })
+    const hdrChunks: TextChunk[] = []
+    cols.forEach((c, i) => {
+      const key = SORTABLE[c.key]
+      const active = key != null && this.store.sortKey === key
+      const arrow = active ? (this.store.sortDir === "asc" ? " ▲" : " ▼") : ""
+      const label = (c.flexible ? "SESSION" : c.title) + arrow
+      hdrChunks.push(fg(active ? TERM.accent : TERM.dim)(cell(label, c.width, c.align)))
+      if (i < cols.length - 1) hdrChunks.push(fg(TERM.dim)(" "))
+    })
+    this.headerCols.content = new StyledText(hdrChunks)
 
     // ── rows
     slice.forEach((item, i) => {
@@ -579,6 +639,44 @@ export class App {
     this.renderHeader(now)
     this.renderFooter(n, width)
     this.renderPlot()
+  }
+
+  // ─── mouse: clickable sorting + row selection ────────────────────
+
+  private headerHit(event: MouseEvent): { key: string; w: number } | null {
+    const target = event.currentTarget ?? this.headerCols
+    const lx = event.x - target.x
+    for (const c of this.colLayout) {
+      if (lx >= c.x && lx < c.x + c.w + 1) return c
+    }
+    return null
+  }
+
+  private onHeaderMouseDown(event: MouseEvent): void {
+    const hit = this.headerHit(event)
+    if (!hit) return
+    const key = SORTABLE[hit.key]
+    if (!key) return
+    this.store.setSort(key)
+    this.mode === "normal" && this.render()
+  }
+
+  private onHeaderMouseOver(event: MouseEvent): void {
+    const hit = this.headerHit(event)
+    this.renderer.setMousePointer(hit && SORTABLE[hit.key] ? "pointer" : "default")
+  }
+
+  /** move the cursor to the session displayed at display index displayIdx */
+  private cursorAt(displayIdx: number): void {
+    if (displayIdx < 0) return
+    this.cursor = this.items.slice(0, displayIdx).filter((it) => it.kind === "session").length
+    this.render()
+  }
+
+  private wheelScroll(event: MouseEvent): void {
+    const d = event.scroll?.direction === "up" ? -1 : 1
+    this.moveCursor(d * Math.max(1, Math.round(this.viewportRows() / 4)))
+    this.render()
   }
 
   // ─── live scatterplot ────────────────────────────────────────────

@@ -50,11 +50,14 @@ mkdir -p ~/.local/bin && ln -sf ~/tktop/bin/tktop ~/.local/bin/tktop
 tktop
 ```
 
-## Keys
+## Keys & mouse
 
-| Key | Action |
+| Input | Action |
 |---|---|
-| `1` `2` `3` `4` | sort by burn rate / recency / total tokens / cost |
+| **click column header** | sort by that column (▼ desc / ▲ asc · click again to reverse; sortable: harness, model, session, dir, in, out, cache-r, rsn, cost, tok/min, age) |
+| **click row** | move the selection cursor there |
+| **mouse wheel** | scroll the table (cursor paging) |
+| `1` `2` `3` `4` | quick sort: burn rate / recency / total tokens / cost |
 | `/` | filter (substring over harness · session · model · dir · id) — `enter` confirm, `esc` cancel |
 | `g` | group by: none → harness → model (with subtotal separator rows) |
 | `a` | toggle archived sessions |
@@ -64,7 +67,7 @@ tktop
 | `?` | help overlay |
 | `q` | quit (Ctrl+C works too) |
 
-CLI flags: `--interval <ms>` · `--filter <s>` · `--sort burn|recent|tokens|cost` · `--all` (show archived).
+CLI flags: `--interval <ms>` · `--filter <s>` · `--sort <key>` (any clickable column: burn, recent, tokens, cost, in, out, cacheR, rsn, age, harness, model, title, dir) · `--all` (show archived).
 
 ## Supported harnesses
 

@@ -91,6 +91,19 @@ Store (2s tick):
       deterministically (separate hash seeds so glyph/color don't correlate). Scatter heads and
       the new table legend column (`◆`) show the same marker+color; `·` when no live dot.
 
+### Phase 5 — v0.3.0 additions (✅ shipped)
+- [x] Complete rename to **tktop** (npm name, bin command, all user-facing text; config moves to
+      `~/.config/tktop/`). UI sweep: column sizing now accounts for the rows-box padding (rightmost
+      AGE column was clipped), sticky header no longer +1 cell off. All harness adapters
+      fixture-verified (38/38: claude incremental, codex latest/no-double-count, generic
+      additive+latest). npm packaging (files whitelist, engines.bun, prepublishOnly typecheck);
+      publish workflow `.github/workflows/publish.yml` (tag-triggered, NPM_TOKEN secret).
+- [x] **Clickable TUI**: click any sortable column header to sort (▼ desc / ▲ asc indicator,
+      accent-colored; click again to reverse), click a row to move the selection cursor there,
+      mouse wheel scrolls the table. Verified end-to-end with real SGR mouse sequences via tmux.
+      `SortKey` extended to every column (in/out/cacheR/rsn/age/harness/model/title/dir) with
+      explicit sort direction; text columns default A→Z, value columns default biggest-first.
+
 ### Phase 5 — Future candidates (not committed)
 - Per-message drill-down (Enter opens a session detail pane; needs `session_part` parsing)
 - Budget/alerts: notify when rate or session cost crosses threshold

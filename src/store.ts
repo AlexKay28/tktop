@@ -91,6 +91,9 @@ export class Store {
 
   intervalMs: number
   sortKey: SortKey = "burn"
+  /** sort direction: "desc" is the natural order for value sorts
+   *  (hottest/newest/biggest first), "asc" for alphabetical sorts */
+  sortDir: "asc" | "desc" = "desc"
   groupBy: GroupKey = "none"
   filter = ""
   showArchived = false
@@ -242,8 +245,20 @@ export class Store {
       recent: (a, b) => b.timeUpdated - a.timeUpdated,
       tokens: (a, b) => totalTokens(b.tokens) - totalTokens(a.tokens),
       cost: (a, b) => b.cost - a.cost,
+      in: (a, b) => b.tokens.input - a.tokens.input,
+      out: (a, b) => b.tokens.output - a.tokens.output,
+      cacheR: (a, b) => b.tokens.cacheRead - a.tokens.cacheRead,
+      rsn: (a, b) => b.tokens.reasoning - a.tokens.reasoning,
+      age: (a, b) => a.timeUpdated - b.timeUpdated,
+      harness: (a, b) => b.harness.localeCompare(a.harness) || b.title.localeCompare(a.title),
+      model: (a, b) => b.model.localeCompare(a.model) || b.title.localeCompare(a.title),
+      title: (a, b) => b.title.localeCompare(a.title),
+      dir: (a, b) => b.directory.localeCompare(a.directory) || b.title.localeCompare(a.title),
     }
-    list.sort(cmp[this.sortKey])
+    // every comparator above is descending-native (hottest / newest / Z→A first);
+    // "asc" flips it. Text columns default to "asc" via setSort().
+    const base = cmp[this.sortKey]
+    list.sort(this.sortDir === "asc" ? (a, b) => base(b, a) : base)
 
     if (this.groupBy === "none") return list
 
@@ -266,8 +281,21 @@ export class Store {
     return out
   }
 
-  /** Group boundary helper for the view: returns group label or null. */
-  groupLabel(row: SessionRow, prevRow: SessionRow | null): string | null {
+  /**
+   * Select a sort column (header click / future keys). Clicking the active
+   * column toggles the direction. Text columns start ascending (A→Z),
+   * value columns start descending (hottest/biggest first).
+   */
+  setSort(key: SortKey): void {
+    if (this.sortKey === key) {
+      this.sortDir = this.sortDir === "desc" ? "asc" : "desc"
+      return
+    }
+    this.sortKey = key
+    this.sortDir = ["harness", "model", "title", "dir"].includes(key) ? "asc" : "desc"
+  }
+
+  /** Group boundary helper for the view: returns group label or null. */  groupLabel(row: SessionRow, prevRow: SessionRow | null): string | null {
     if (this.groupBy === "none") return null
     const g = this.groupBy === "harness" ? row.harness : row.model
     const pg = prevRow ? (this.groupBy === "harness" ? prevRow.harness : prevRow.model) : null

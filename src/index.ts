@@ -5,10 +5,12 @@
  *   bun run src/index.ts                 (or the `tktop` shim)
  *   --interval <ms>   poll interval (default 2000)
  *   --filter <s>      initial substring filter
- *   --sort <key>      burn | recent | tokens | cost
+ *   --sort <key>      burn | recent | tokens | cost | in | out | cacheR | rsn | age | harness | model | title | dir
  *   --all             include archived sessions
  */
 import { createCliRenderer } from "@opentui/core"
+import type { SortKey } from "./types"
+import { SORT_KEYS } from "./types"
 import { buildAdapters } from "./adapters/registry"
 import { Store } from "./store"
 import { App } from "./ui"
@@ -34,7 +36,7 @@ async function main(): Promise<void> {
   const f = str("--filter")
   if (f) store.filter = f
   const s = str("--sort")
-  if (s && ["burn", "recent", "tokens", "cost"].includes(s)) store.sortKey = s as any
+  if (s && (SORT_KEYS as readonly string[]).includes(s)) store.setSort(s as SortKey)
 
   const renderer = await createCliRenderer({
     exitOnCtrlC: true,
