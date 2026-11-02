@@ -41,6 +41,8 @@ Codex, and anything that writes JSONL.
 
 *(real capture — the two nested sessions are subagents spawned by that very parent session)*
 
+![live demo — tree view → group-by → filter → drill-down](docs/demo.gif)
+
 ## Why tktop?
 
 You run OpenCode, Claude Code, Codex, and half a dozen agents in parallel. They all
@@ -219,10 +221,10 @@ generic-JSONL config above as a template.
 - [x] Mouse: click-to-sort, row select, wheel scroll
 - [x] Tree view for subagent sessions
 - [x] npm + PyPI distribution
-- [ ] Session drill-down (per-message breakdowns)
-- [ ] Budget alerts (rate/cost thresholds)
-- [ ] `@opentui/ssh` remote watching
-- [ ] Standalone compiled binary
+- [x] Session drill-down (per-message breakdowns — `Enter` on a session, headless via `tktop-dump --drill`)
+- [x] Budget alerts (rate/cost thresholds — `~/.config/tktop/config.json`, bell on new alert)
+- [x] `@opentui/ssh` remote watching (`tktop --serve [port]`, `ssh -p <port> localhost`)
+- [x] Standalone compiled binary (`npm run compile` → `dist/tktop`, ~130 MB, runs with no Bun install)
 
 Ideas welcome — please [open an issue](https://github.com/AlexKay28/tktop/issues/new).
 

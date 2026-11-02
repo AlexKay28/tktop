@@ -28,6 +28,32 @@ export interface SessionInfo {
   parentId?: string | null
 }
 
+/** One entry in a per-session drill-down timeline (a message / turn / tool call). */
+export interface DrillEntry {
+  /** epoch ms */
+  time: number
+  /** normalized role or event type: user, assistant, system, tool, compaction, … */
+  role: string
+  /** model used for this turn, if recorded */
+  model?: string
+  /** short human summary (prompt text, tool name, event description) */
+  summary: string
+  /** tokens recorded for this entry, when the harness tracks them per message */
+  tokens?: Partial<TokenCounts>
+  /** cost recorded for this entry, when tracked */
+  cost?: number
+}
+
+/** Full drill-down for one session. */
+export interface Drilldown {
+  harness: string
+  sessionId: string
+  title: string
+  entries: DrillEntry[]
+  /** true when the harness only exposes a bounded window (e.g. last N parts) */
+  truncated?: boolean
+}
+
 /**
  * A harness adapter reads whatever traces a harness leaves on disk and
  * converts them into SessionInfo snapshots. Adapters must never control
@@ -41,6 +67,11 @@ export interface Adapter {
   /** Read all sessions known right now. */
   poll(): SessionInfo[]
   lastError: string | null
+  /**
+   * Optional: per-message timeline for one session (drill-down view).
+   * Return null when the harness does not record message-level traces.
+   */
+  drilldown?(sessionId: string): Drilldown | null
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "name": "tktop",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "type": "module",
   "description": "Live htop-style TUI dashboard for AI token consumption across harnesses (OpenCode, Claude Code, Codex, generic JSONL)",
   "keywords": [
@@ -38,12 +38,15 @@
     "tktop": "bun run src/index.ts",
     "dump": "bun run src/dump.ts",
     "typecheck": "bun check",
+    "compile": "bun build --compile src/index.ts --external cpu-features --outfile dist/tktop",
     "prepublishOnly": "bun run typecheck"
   },
   "dependencies": {
-    "@opentui/core": "^0.8.1"
+    "@opentui/core": "^0.8.1",
+    "@opentui/ssh": "^0.8.1"
   },
   "devDependencies": {
+    "@opentui/core-linux-x64-musl": "^0.8.1",
     "@types/bun": "latest"
   }
 }

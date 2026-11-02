@@ -21,6 +21,7 @@ import {
 import type { SessionRow } from "./store"
 import { Store, TRACK_COLORS, TRACK_MARKERS } from "./store"
 import { cell, fit, fmtAgo, fmtCost, fmtRate, fmtTokens, shortDir, sparkline } from "./format"
+import { drillEntryLine } from "./drilldown"
 
 const TERM = {
   bg: "#11111b",
@@ -37,7 +38,7 @@ const TERM = {
   sel: "#313244",
 }
 
-type Mode = "normal" | "filter" | "help"
+type Mode = "normal" | "filter" | "help" | "drill"
 
 interface Col {
   key: string
@@ -128,6 +129,12 @@ export class App {
   private filterInput!: InputRenderable
   private hotkeys!: TextRenderable
   private helpOverlay!: BoxRenderable
+  private drillOverlay!: BoxRenderable
+  private drillTitle!: TextRenderable
+  private drillBody!: TextRenderable
+  private drillScroll = 0
+  /** alert messages already announced with a bell (edge-triggered) */
+  private belledAlerts = new Set<string>()
 
   private pool: TextRenderable[] = []
   private items: DisplayItem[] = []
@@ -257,7 +264,7 @@ export class App {
     this.helpOverlay = new BoxRenderable(r, {
       position: "absolute",
       width: 54,
-      height: 14,
+      height: 16,
       top: 4,
       left: 4,
       backgroundColor: TERM.surface,
@@ -267,13 +274,6 @@ export class App {
       paddingX: 1,
       visible: false,
     })
-    this.helpOverlay.add(
-      new TextRenderable(r, {
-        content: t`  ${fg(TERM.accent)(bold("tktop — keys"))}`,
-        height: 1,
-        wrapMode: "none",
-      }),
-    )
     const keyRows: [string, string][] = [
       ["click", "column header: sort by that column (click again: reverse)"],
       ["click", "row: move cursor there · wheel: scroll"],
@@ -281,6 +281,7 @@ export class App {
       ["/", "filter (enter confirm · esc cancel)"],
       ["g", "group by: none → harness → model"],
       ["t", "tree view: nest subagent sessions (htop-style)"],
+      ["enter", "drill-down: per-message timeline for the selected session"],
       ["a", "toggle archived sessions"],
       ["j/k or ↑/↓", "move cursor · PgUp/PgDn page"],
       ["Home / End", "jump to first / last"],
@@ -288,6 +289,13 @@ export class App {
       ["r", "force refresh now"],
       ["q", "quit"],
     ]
+    this.helpOverlay.add(
+      new TextRenderable(r, {
+        content: t`  ${fg(TERM.accent)(bold("tktop — keys"))}`,
+        height: 1,
+        wrapMode: "none",
+      }),
+    )
     for (const [k, d] of keyRows) {
       this.helpOverlay.add(
         new TextRenderable(r, {
@@ -298,6 +306,26 @@ export class App {
       )
     }
     root.add(this.helpOverlay)
+
+    // ── drill-down overlay (Enter on a session): per-message timeline
+    this.drillOverlay = new BoxRenderable(r, {
+      position: "absolute",
+      width: "86%",
+      height: "80%",
+      top: "5%",
+      left: "7%",
+      backgroundColor: TERM.surface,
+      borderColor: TERM.accent,
+      border: true,
+      flexDirection: "column",
+      paddingX: 1,
+      visible: false,
+    })
+    this.drillTitle = new TextRenderable(r, { content: "", height: 1, wrapMode: "none" })
+    this.drillBody = new TextRenderable(r, { content: "", wrapMode: "none", overflow: "scroll" })
+    this.drillOverlay.add(this.drillTitle)
+    this.drillOverlay.add(this.drillBody)
+    root.add(this.drillOverlay)
   }
 
   // ─── keyboard ────────────────────────────────────────────────────
@@ -321,6 +349,37 @@ export class App {
         this.mode = "normal"
         this.render()
       }
+      return
+    }
+
+    if (this.mode === "drill") {
+      // scroll the timeline; j/k/up/down line-wise, PgUp/PgDn page, enter/esc/q close
+      switch (key.name) {
+        case "escape":
+        case "q":
+        case "return":
+          this.drillOverlay.visible = false
+          this.mode = "normal"
+          break
+        case "j":
+        case "down":
+          this.drillScroll += 1
+          this.renderDrillBody()
+          break
+        case "k":
+        case "up":
+          this.drillScroll = Math.max(0, this.drillScroll - 1)
+          this.renderDrillBody()
+          break
+        case "pageup":
+        case "pagedown": {
+          const page = Math.max(1, (this.renderer.height ?? 40) - 6)
+          this.drillScroll = Math.max(0, this.drillScroll + (key.name === "pagedown" ? page : -page))
+          this.renderDrillBody()
+          break
+        }
+      }
+      this.render()
       return
     }
 
@@ -370,6 +429,10 @@ export class App {
       case "r":
         void this.store.tick().then(() => this.render())
         return
+      case "return":
+        // drill-down: per-message timeline for the selected session
+        this.openDrilldown()
+        return
       case "?":
         this.helpOverlay.visible = true
         this.mode = "help"
@@ -404,6 +467,50 @@ export class App {
 
   private sessionCount(): number {
     return this.items.reduce((s, i) => s + (i.kind === "session" ? 1 : 0), 0)
+  }
+
+  /** The DisplayItem currently under the cursor (first display-position session = 0). */
+  private selectedRow(): SessionRow | null {
+    const sessions = this.items.filter((i) => i.kind === "session")
+    return (sessions[this.cursor]?.row as SessionRow | undefined) ?? null
+  }
+
+  // ─── drill-down mode ─────────────────────────────────────────────
+
+  private openDrilldown(): void {
+    const row = this.selectedRow()
+    if (!row) return
+    const d = this.store.drilldown(row.key)
+    if (!d) {
+      this.statusLine.content = t`${fg(TERM.red)(
+        `drill-down: harness "${row.harness}" does not record per-message data`,
+      )}`
+      this.render()
+      setTimeout(() => this.render(), 2500)
+      return
+    }
+    this.drillScroll = 0
+    this.drillTitle.content = t`${fg(TERM.accent)(bold(` drill-down: `))}${fg(TERM.fgText)(
+      `${d.title} · ${d.entries.length} entries${d.truncated ? " (truncated)" : ""}`,
+    )}${fg(TERM.dim)("  ·  j/k scroll · enter/esc close")}`
+    this.renderDrillBody()
+    this.drillOverlay.visible = true
+    this.mode = "drill"
+    this.render()
+  }
+
+  private renderDrillBody(): void {
+    const d = this.store.drilldown(this.selectedRow()?.key ?? "")
+    if (!d) return
+    const height = Math.max(1, (this.renderer.height ?? 40) - 8)
+    const entries = [...d.entries].reverse() // newest first
+    const start = Math.min(this.drillScroll, Math.max(0, entries.length - height))
+    const lines: string[] = []
+    for (const e of entries.slice(start, start + height)) {
+      lines.push(drillEntryLine(e))
+    }
+    if (start + height < entries.length) lines.push(`  … ${entries.length - start - height} older`)
+    this.drillBody.content = lines.join("\n")
   }
 
   private moveCursor(delta: number): void {
@@ -897,10 +1004,32 @@ export class App {
     ])
   }
 
+  /** Edge-triggered terminal bell: ring once per new alert message, not every frame. */
+  private ringBellIfNeeded(alerts: { message: string }[]): void {
+    for (const a of alerts) {
+      if (!this.belledAlerts.has(a.message)) {
+        this.belledAlerts.add(a.message)
+        process.stdout.write("\x07") // BEL
+      }
+    }
+    // allow re-alerting after the condition clears
+    const live = new Set(alerts.map((a) => a.message))
+    for (const m of [...this.belledAlerts]) if (!live.has(m)) this.belledAlerts.delete(m)
+  }
+
   private renderFooter(sessionCount: number, width: number): void {
     const errs = this.store.adapterErrors
     if (this.mode !== "filter" && this.mode !== "help") {
-      if (errs.length) {
+      const alerts = this.store.alerts
+      if (alerts.length) {
+        // budget alerts outrank adapter errors — they are why the user is watching
+        const first = alerts.slice(0, 2).map((a) => a.message)
+        this.statusLine.content = new StyledText([
+          fg(TERM.red)(` ⚠ ${alerts.length} alert${alerts.length === 1 ? "" : "s"} — `),
+          fg(TERM.red)(fit(first.join(" · "), width - 22)),
+        ])
+        this.ringBellIfNeeded(alerts)
+      } else if (errs.length) {
         this.statusLine.content = new StyledText([
           fg(TERM.red)(" ! "),
           fg(TERM.red)(fit(errs.join(" · "), width - 3)),

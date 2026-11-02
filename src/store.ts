@@ -2,8 +2,9 @@
  * Store — the stateful hub: polls adapters, derives burn rates,
  * keeps sparkline history, owns view knobs. See docs/ADR-001.
  */
-import type { Adapter, GroupKey, SessionInfo, SortKey, TokenCounts } from "./types"
+import type { Adapter, Drilldown, GroupKey, SessionInfo, SortKey, TokenCounts } from "./types"
 import { totalTokens } from "./format"
+import { evaluateAlerts, type Alert, type AlertThresholds } from "./alerts"
 
 /** Session snapshot enriched with derived live metrics. */
 export interface SessionRow extends SessionInfo {
@@ -99,6 +100,10 @@ export class Store {
   tree = false
   filter = ""
   showArchived = false
+  /** budget alert thresholds (see src/alerts.ts); empty config disables alerts */
+  alertThresholds: AlertThresholds = {}
+  /** alerts active after the most recent tick */
+  alerts: Alert[] = []
   /** live scatter tracks (see SessionTrack) */
   readonly tracks = new Map<string, SessionTrack>()
 
@@ -119,6 +124,20 @@ export class Store {
       sessions: [...this.byKey.values()].filter((r) => r.harness === a.harness).length,
       error: a.lastError,
     }))
+  }
+
+  /** Proxied drill-down: per-message timeline for one visible session, by key. */
+  drilldown(key: string): Drilldown | null {
+    const row = this.byKey.get(key)
+    if (!row) return null
+    const a = this.adapters.find((x) => x.harness === row.harness)
+    if (!a?.drilldown) return null
+    try {
+      return a.drilldown(row.id)
+    } catch (e) {
+      a.lastError = `drilldown: ${(e as Error).message}`
+      return null
+    }
   }
 
   /** One polling pass over all adapters. Safe to call repeatedly. */
@@ -190,6 +209,9 @@ export class Store {
       }
     }
     this.initialized = true
+
+    // ── budget alerts (pure evaluation over visible rows)
+    this.alerts = evaluateAlerts(this.rows(), this.alertThresholds)
 
     // ── live scatter tracks
     for (const row of this.byKey.values()) {

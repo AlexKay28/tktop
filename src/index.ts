@@ -7,6 +7,11 @@
  *   --filter <s>      initial substring filter
  *   --sort <key>      burn | recent | tokens | cost | in | out | cacheR | rsn | age | harness | model | title | dir
  *   --all             include archived sessions
+ *   --serve [port]   SSH server mode: watch tktop from another machine
+ *                    (`ssh -p <port> localhost`); default port 2222
+ *
+ * Config (optional): ~/.config/tktop/config.json
+ *   { "alerts": { "burnTokPerMin": 5000, "sessionCost": 1.0, "sessionTokens": 1000000 } }
  */
 import { createCliRenderer } from "@opentui/core"
 import type { SortKey } from "./types"
@@ -14,6 +19,8 @@ import { SORT_KEYS } from "./types"
 import { buildAdapters } from "./adapters/registry"
 import { Store } from "./store"
 import { App } from "./ui"
+import { loadAlertThresholds } from "./alerts"
+import { serveOverSsh } from "./serve"
 
 const args = process.argv.slice(2)
 const num = (name: string, dflt: number): number => {
@@ -32,6 +39,13 @@ const str = (name: string): string | null => {
 async function main(): Promise<void> {
   const interval = num("--interval", 2000)
   const store = new Store(buildAdapters(), interval)
+  store.alertThresholds = loadAlertThresholds()
+  if (args.includes("--serve")) {
+    const portIdx = args.indexOf("--serve")
+    const port = Number(args[portIdx + 1])
+    await serveOverSsh(store, Number.isFinite(port) && port > 0 ? port : 2222)
+    return
+  }
   if (args.includes("--all")) store.showArchived = true
   const f = str("--filter")
   if (f) store.filter = f

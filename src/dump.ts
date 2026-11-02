@@ -1,11 +1,13 @@
 /**
  * Headless mode: poll once and print the table to stdout.
- * Usage: bun run src/dump.ts [--all] [--filter s] [--sort burn|recent|tokens|cost]
+ * Usage: bun run src/dump.ts [--all] [--filter s] [--sort burn|recent|tokens|cost] [--drill s]
  * This is the data-layer checkpoint from docs/RESOLUTION-PLAN.md Phase 1.
  */
 import { buildAdapters } from "./adapters/registry"
 import { Store } from "./store"
 import { cell, fmtAgo, fmtCost, fmtRate, fmtTokens, shortDir, totalTokens } from "./format"
+import { renderDrilldown } from "./drilldown"
+import { evaluateAlerts, loadAlertThresholds } from "./alerts"
 
 const args = process.argv.slice(2)
 const flag = (name: string): string | null => {
@@ -15,6 +17,7 @@ const flag = (name: string): string | null => {
 
 const store = new Store(buildAdapters(), 2000)
 store.showArchived = args.includes("--all")
+store.alertThresholds = loadAlertThresholds()
 const f = flag("--filter")
 if (f) store.filter = f
 const s = flag("--sort")
@@ -23,6 +26,32 @@ if (s && ["burn", "recent", "tokens", "cost"].includes(s)) store.sortKey = s as 
 await store.tick()
 await new Promise((r) => setTimeout(r, 700)) // seed a real time delta for rate computation
 await store.tick()
+
+// ── drill-down mode: one session, full per-message timeline, then exit
+const drillFilter = flag("--drill")
+if (drillFilter) {
+  const match = store
+    .rows()
+    .filter((r) =>
+      !drillFilter || r.title.includes(drillFilter) || r.id.includes(drillFilter)
+        || r.key.includes(drillFilter)
+        ? true
+        : false,
+    )
+    .sort((a, b) => b.timeUpdated - a.timeUpdated)[0]
+  if (!match) {
+    console.error(`no visible session matches ${JSON.stringify(drillFilter)}`)
+    process.exit(1)
+  }
+  const d = store.drilldown(match.key)
+  if (!d) {
+    console.error(`harness "${match.harness}" does not record per-message data.`)
+    process.exit(2)
+  }
+  const limit = parseInt(flag("--drill-limit") ?? "", 10)
+  for (const l of renderDrilldown(d, Number.isFinite(limit) && limit > 0 ? limit : 100)) console.log(l)
+  process.exit(0)
+}
 
 const adapters = store.adaptersLive
 const errors = store.adapterErrors
@@ -74,5 +103,10 @@ for (const r of rows.slice(0, Math.max(10, (process.stdout.rows ?? 40) - 8))) {
 if (rows.length > 36) console.log(`… ${rows.length - 36} more`)
 if (errors.length) {
   console.error("adapter errors:\n  " + errors.join("\n  "))
+}
+const fired = evaluateAlerts(rows, store.alertThresholds)
+if (fired.length) {
+  console.error(`⚠ ${fired.length} budget alert${fired.length === 1 ? "" : "s"}:`)
+  for (const a of fired.slice(0, 10)) console.error(`  ⚠ ${a.message}`)
 }
 console.log(`total tokens (all visible): ${fmtTokens(totalTokens(totals.tokens))}`)

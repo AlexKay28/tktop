@@ -1,5 +1,11 @@
 name: publish npm
 
+# Tag-triggered npm publish (see docs/RELEASING.md for the full release flow).
+# Requires the NPM_TOKEN repository secret (Add via:
+#   https://github.com/AlexKay28/tktop/settings/secrets/actions ).
+# When the secret is absent the workflow still passes — it skips publishing
+# with a visible notice — so pre-secret tags never show a red ✗.
+
 on:
   workflow_dispatch:
   push:
@@ -15,10 +21,24 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - run: bun run typecheck
+      - name: Gate on NPM_TOKEN presence
+        id: gate
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::NPM_TOKEN secret is not set — skipping npm publish. Add it at https://github.com/AlexKay28/tktop/settings/secrets/actions and re-run, or publish manually."
+          fi
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.present == 'true'
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - run: npm publish --access public
+      - name: Publish
+        if: steps.gate.outputs.present == 'true'
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -2,6 +2,23 @@
 
 All notable changes to **tktop**. Format: [Keep a Changelog](https://keepachangelog.com/); versioning: SemVer-ish per feature release.
 
+## [0.4.0] — 2026-11-02
+
+### Added
+- **Session drill-down**: `Enter` on any row opens its per-message timeline (roles,
+  models, summaries, per-message tokens/cost); headless via `tktop-dump --drill `.
+  OpenCode reads `session_message` (+ optional `session_part`), degrades gracefully on
+  older/harnesses without message traces.
+- **Budget alerts**: `~/.config/tktop/config.json` thresholds
+  (`burnTokPerMin`, `sessionCost`, `sessionTokens`); live bell + status-line banner;
+  pure evaluation, unit-tested.
+- **`@opentui/ssh` remote watching**: `tktop --serve [port]` exposes the live TUI to
+  `ssh -p <port> localhost`; every client has independent cursor/sort/filter state.
+- **Standalone binary**: `npm run compile` → `dist/tktop` (~130 MB, runs with no Bun
+  install on the target machine).
+- **CI publish**: tag-triggered `.github/workflows/publish.yml` with an `NPM_TOKEN`
+  presence gate (skips with a notice instead of red-X until the secret is added).
+
 ## [0.3.4] — 2026-11-02
 
 ### Added
