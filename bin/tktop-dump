@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# tktop-dump launcher — headless one-shot table via Bun (no TUI).
+# Prints the current session table once and exits; ideal for scripts, logs,
+# cron summaries and CI heat-maps. Same flags as the TUI where meaningful:
+#   tktop-dump --filter <s> --sort <key> --all
+set -eu
+
+REPO_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+export PATH="$HOME/.bun/bin:$PATH"
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "tktop-dump: bun is required but not installed." >&2
+  echo "  install it with: curl -fsSL https://bun.sh/install | bash" >&2
+  exit 1
+fi
+
+exec bun run "$REPO_ROOT/src/dump.ts" "$@"

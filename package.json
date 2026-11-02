@@ -1,6 +1,6 @@
 {
   "name": "tktop",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "type": "module",
   "description": "Live htop-style TUI dashboard for AI token consumption across harnesses (OpenCode, Claude Code, Codex, generic JSONL)",
   "keywords": [
@@ -16,16 +16,18 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/AlexKay28/tktop.git"
+    "url": "https://github.com/AlexKay28/tktop.git"
   },
   "bin": {
-    "tktop": "bin/tktop"
+    "tktop": "bin/tktop",
+    "tktop-dump": "bin/tktop-dump"
   },
   "files": [
     "bin/",
     "src/",
     "docs/",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {
