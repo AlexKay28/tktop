@@ -38,3 +38,6 @@ python/tktop_tui/tui/
 python/dist/
 python/build/
 *.egg-info/
+
+# python tooling caches
+__pycache__/
